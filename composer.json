@@ -1,7 +1,22 @@
 {
-    "name": "dmleach/frock",
+    "authors": [
+        {
+            "name": "Dave Leach",
+            "email": "dave@daveleach.work",
+            "homepage": "http://www.daveleach.work",
+            "role": "Developer"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "dmleach\\frock\\": ""
+        }
+    },
     "description": "A front controller for PHP MVC applications",
+    "homepage": "http://www.github.com/dmleach/frock",
+    "license": "MIT",
+    "name": "dmleach/frock",
     "require": {
-        "php": "^5.3.3 || ^7.0"
+        "php": "^5.3 || ^7.0"
     }
 }
