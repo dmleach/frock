@@ -21,12 +21,20 @@ class Frock
     public $baseNamespace = '';
     private $controllerNamespace = 'controller';
 
+    /** @var bool $debug If true, messages are written to the debug log */
+    public $debug = false;
+
+    /** @var string[] $debugLog An array of debug messages */
+    public $debugLog = [];
+
 
     /**
      * @param array $request An http request array. If null, $_REQUEST is used
      */
     public function __construct($request = null)
     {
+        $this->logMessage("__construct: request = " . print_r($request));
+
         $request = is_null($request) ? $_REQUEST : $request;
         $this->processHttpRequest($request);
     }
@@ -41,6 +49,8 @@ class Frock
      */
     public function executePathController($path = null)
     {
+        $this->logMessage("executePathController: path = {$path}");
+
         $controller = $this->instantiatePathController($path);
         $controller->execute();
     }
@@ -55,6 +65,8 @@ class Frock
      */
     public function getControllerClassName($path)
     {
+        $this->logMessage("getControllerClassName: path = {$path}");
+
         if (is_null($path)) {
             $path = is_null($this->path) ? $this->defaultPath : $this->path;
         }
@@ -105,9 +117,24 @@ class Frock
      */
     public function instantiatePathController($path = null)
     {
+        $this->logMessage("instantiatePathController: path = {$path}");
+
         $className = $this->getControllerClassName($path);
-        $controller = new $className;
-        return $controller;
+        $this->logMessage("instantiatePathController: className = {$className}");
+
+        if (class_exists($className)) {
+            $controller = new $className;
+            return $controller;
+        } else {
+            throw new \Exception("Class not found: {$className}");
+        }
+    }
+
+    protected function logMessage($message)
+    {
+        if ($this->debug) {
+            $this->debugLog[] = $message;
+        }
     }
 
     /**
@@ -119,6 +146,8 @@ class Frock
      */
     public function processHttpRequest($request)
     {
+        $this->logMessage('processHttpRequest: request = ' . print_r($request, true));
+
         $this->path = null;
 
         if (is_array($request)) {
@@ -139,6 +168,8 @@ class Frock
      */
     public function setPathKey($key)
     {
+        $this->logMessage("setPathKey: key = {$key}");
+
         if (is_string($key) || is_int($key)) {
             $this->pathKey = $key;
             return true;
