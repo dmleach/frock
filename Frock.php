@@ -4,6 +4,10 @@ namespace dmleach\frock;
 
 class Frock
 {
+    const CLASS_TYPE_CONTROLLER = 'controller';
+    const CLASS_TYPE_MODEL = 'model';
+    const CLASS_TYPE_VIEW = 'view';
+
     /** @var string $pathVariable The key in the http request that contains
             the requested path. This must match the variable declared in the
             rewrite rule in .htaccess */
@@ -16,10 +20,13 @@ class Frock
             related functions are called with a null parameter */
     public $defaultPath = 'hello';
 
-    /** @var string $baseNamespace The namespace that contains the controllers
-            this front controller will reference */
-    public $baseNamespace = '';
-    private $controllerNamespace = 'controller';
+    /** @var string[] $namespaces The namespaces that contains the
+            controllers for the app */
+    private $namespaces = [
+        self::CLASS_TYPE_CONTROLLER => '',
+        self::CLASS_TYPE_MODEL => '',
+        self::CLASS_TYPE_VIEW => '',
+    ];
 
     /** @var bool $debug If true, messages are written to the debug log */
     public $debug = false;
@@ -40,32 +47,40 @@ class Frock
     }
 
     /**
-     * Instantiates the controller at the given path and runs its execute method
+     * Instantiates the class at the given path and runs its execute method
      *
-     * @param string $path The controller's request path. If null, the default
-     *     controller is used
+     * @param string $classType The type of the class to instantiate
+     *     (controller, model, or view)
+     * @param string $path The class's request path. If null, the default
+     *     class is used
      *
      * @return void
      */
-    public function executePathController($path = null)
+    public function executePath($classType, $path = null)
     {
-        $this->logMessage("executePathController: path = {$path}");
+        $this->logMessage("executePathController: classType = {$classType}, path = {$path}");
 
-        $controller = $this->instantiatePathController($path);
-        $controller->execute();
+        $instance = $this->instantiatePathClass($classType, $path);
+        $instance->execute();
     }
 
     /**
-     * Converts a request path into a namespace and controller class name
+     * Converts a request path into a namespace and class name
      *
+     * @param string $classType The type of the class to instantiate
+     *     (controller, model, or view)
      * @param string $path The controller's request path. If null, the default
      *     controller is used
      *
      * @return string
      */
-    public function getControllerClassName($path)
+    public function getClassName($classType, $path = null)
     {
-        $this->logMessage("getControllerClassName: path = {$path}");
+        $this->logMessage("getClassName: classType = {$classType}, path = {$path}");
+
+        if (!array_key_exists($classType, $this->namespaces)) {
+            return null;
+        }
 
         if (is_null($path)) {
             $path = is_null($this->path) ? $this->defaultPath : $this->path;
@@ -74,8 +89,7 @@ class Frock
         // Convert any slashes in the path to namespace separators
         $path = str_replace('/', '\\', $path);
 
-        $classNamespace = $this->baseNamespace . '\\' . $this->controllerNamespace;
-        $className = $classNamespace . '\\' . $path;
+        $className = $this->namespaces[$classType] . '\\' . $path;
 
         // PSR-1 specifies the class name must be capitalized
         $lastBackslashPos = strrpos($className, '\\');
@@ -108,23 +122,25 @@ class Frock
     }
 
     /**
-     * Instantiates and returns the controller at the given path
+     * Instantiates and returns the class at the given path
      *
+     * @param string $classType The type of the class to instantiate
+     *     (controller, model, or view)
      * @param string $path The controller's request path. If null, the default
      *     controller is used
      *
      * @return object
      */
-    public function instantiatePathController($path = null)
+    public function instantiatePathClass($classType, $path = null)
     {
-        $this->logMessage("instantiatePathController: path = {$path}");
+        $this->logMessage("instantiatePathClass: classType = {$classType}, path = {$path}");
 
-        $className = $this->getControllerClassName($path);
+        $className = $this->getClassName($classType, $path);
         $this->logMessage("instantiatePathController: className = {$className}");
 
         if (class_exists($className)) {
-            $controller = new $className;
-            return $controller;
+            $instance = new $className;
+            return $instance;
         } else {
             throw new \Exception("Class not found: {$className}");
         }
@@ -157,6 +173,25 @@ class Frock
         }
 
         return !is_null($this->path);
+    }
+
+    /**
+     * Sets the value of the class type's namespace
+     *
+     * @param string $classType The type of the class to instantiate
+     *     (controller, model, or view)
+     * @param string $namespace The new namespace value
+     *
+     * @return bool True if the given class type exists; false otherwise
+     */
+    public function setClassNamespace($classType, $namespace)
+    {
+        if (array_key_exists($classType, $this->namespaces)) {
+            $this->namespaces[$classType] = $namespace;
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /**
